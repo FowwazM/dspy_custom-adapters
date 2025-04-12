@@ -13,13 +13,14 @@ logger = logging.getLogger(__name__)
 
 
 class ReAct(Module):
-    def __init__(self, signature, tools: list[Callable], max_iters=5):
+    def __init__(self, signature, tools: list[Callable], template=None, max_iters=5):
         """
         `tools` is either a list of functions, callable classes, or `dspy.Tool` instances.
         """
 
         self.signature = signature = ensure_signature(signature)
         self.max_iters = max_iters
+        self.template = template
 
         tools = [t if isinstance(t, Tool) else Tool(t) for t in tools]
         tools = {tool.name: tool for tool in tools}
@@ -63,11 +64,12 @@ class ReAct(Module):
         ).append("trajectory", dspy.InputField(), type_=str)
 
         self.tools = tools
-        self.react = dspy.Predict(react_signature)
+        self.react = dspy.Predict(react_signature, template=self.template)
         self.extract = dspy.ChainOfThought(fallback_signature)
 
     def _format_trajectory(self, trajectory: dict[str, Any]):
-        adapter = dspy.settings.adapter or dspy.ChatAdapter()
+        if self.templates is not None: adapter = dspy.CustomAdapter(template=self.template)
+        else: adapter = dspy.settings.adapter or dspy.ChatAdapter()
         trajectory_signature = dspy.Signature(f"{', '.join(trajectory.keys())} -> x")
         return adapter.format_user_message_content(trajectory_signature, trajectory)
 

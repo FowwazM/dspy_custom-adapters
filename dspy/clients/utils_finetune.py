@@ -24,7 +24,7 @@ class TrainingStatus(str, Enum):
 
 
 def infer_data_format(adapter: Adapter) -> str:
-    if isinstance(adapter, dspy.ChatAdapter):
+    if isinstance(adapter, dspy.ChatAdapter) or isinstance(adapter, dspy.CustomAdapter):
         return TrainDataFormat.CHAT
     raise ValueError(f"Could not infer the data format for: {adapter}")
 

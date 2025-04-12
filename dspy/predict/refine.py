@@ -45,6 +45,7 @@ class Refine(Module):
         N: int,
         reward_fn: Callable[[dict, Prediction], float],
         threshold: float,
+        template=None,
         fail_count: Optional[int] = None,
     ):
         """
@@ -87,6 +88,7 @@ class Refine(Module):
         self.reward_fn = lambda *args: reward_fn(*args)  # to prevent this from becoming a parameter
         self.threshold = threshold
         self.N = N
+        self.template = template
         self.fail_count = fail_count or N  # default to N if fail_count is not provided
         self.module_code = inspect.getsource(module.__class__)
         try:
@@ -100,7 +102,8 @@ class Refine(Module):
         temps = list(dict.fromkeys(temps))[: self.N]
         best_pred, best_trace, best_reward = None, None, -float("inf")
         advice = None
-        adapter = dspy.settings.adapter or dspy.ChatAdapter()
+        if self.template is not None: adapter = dspy.CustomAdapter(template=self.template)
+        else: adapter = dspy.settings.adapter or dspy.ChatAdapter()
 
         for idx, t in enumerate(temps):
             lm_ = lm.copy(temperature=t)

@@ -2,9 +2,10 @@ import dspy
 from .predict import Module
 
 class ChainOfThoughtWithHint(Module):
-    def __init__(self, signature, rationale_type=None, **config):
+    def __init__(self, signature, template=None, rationale_type=None, **config):
         self.signature = dspy.ensure_signature(signature)
-        self.module = dspy.ChainOfThought(signature, rationale_type=rationale_type, **config)
+        self.template = template
+        self.module = dspy.ChainOfThought(signature, template=self.template, rationale_type=rationale_type, **config)
     
     def forward(self, **kwargs):
         if 'hint' in kwargs and kwargs['hint']:

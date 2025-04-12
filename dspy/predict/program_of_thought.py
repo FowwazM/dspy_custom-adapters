@@ -28,7 +28,7 @@ class ProgramOfThought(Module):
     ```
     """
 
-    def __init__(self, signature: Union[str, Type[Signature]], max_iters=3):
+    def __init__(self, signature: Union[str, Type[Signature]], template=None, max_iters=3):
         """
         Args:
             signature: The signature of the module.
@@ -37,6 +37,7 @@ class ProgramOfThought(Module):
         super().__init__()
         self.signature = signature = ensure_signature(signature)
         self.max_iters = max_iters
+        self.template = template
 
         self.input_fields = signature.input_fields
         self.output_fields = signature.output_fields
@@ -46,18 +47,21 @@ class ProgramOfThought(Module):
                 self._generate_signature("generate").fields,
                 self._generate_instruction("generate"),
             ),
+            template=self.template,
         )
         self.code_regenerate = dspy.ChainOfThought(
             dspy.Signature(
                 self._generate_signature("regenerate").fields,
                 self._generate_instruction("regenerate"),
             ),
+            template=self.template,
         )
         self.generate_answer = dspy.ChainOfThought(
             dspy.Signature(
                 self._generate_signature("answer").fields,
                 self._generate_instruction("answer"),
             ),
+            template=self.template,
         )
         # It will raises exception when dspy cannot find available deno instance by now.
         self.interpreter = PythonInterpreter()

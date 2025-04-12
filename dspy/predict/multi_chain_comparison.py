@@ -6,10 +6,11 @@ from dspy.predict.predict import Predict
 
 
 class MultiChainComparison(Module):
-    def __init__(self, signature, M=3, temperature=0.7, **config):
+    def __init__(self, signature, M=3, temperature=0.7, template=None, **config):
         super().__init__()
 
         self.M = M
+        self.template = template
         signature = ensure_signature(signature)
 
         *_, self.last_key = signature.output_fields.keys()
@@ -30,7 +31,7 @@ class MultiChainComparison(Module):
             ),
         )
 
-        self.predict = Predict(signature, temperature=temperature, **config)
+        self.predict = Predict(signature, temperature=temperature, template=self.template, **config)
 
     def forward(self, completions, **kwargs):
         attempts = []

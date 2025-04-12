@@ -4,6 +4,7 @@ import random
 from pydantic import BaseModel
 
 from dspy.adapters.chat_adapter import ChatAdapter
+from dspy.adapters.custom_adapter import CustomAdapter
 from dspy.clients.base_lm import BaseLM
 from dspy.clients.lm import LM
 from dspy.dsp.utils import settings
@@ -18,11 +19,12 @@ logger = logging.getLogger(__name__)
 
 
 class Predict(Module, Parameter):
-    def __init__(self, signature, callbacks=None, **config):
+    def __init__(self, signature, template=None, callbacks=None, **config):
         self.stage = random.randbytes(8).hex()
         self.signature = ensure_signature(signature)
         self.config = config
         self.callbacks = callbacks or []
+        self.template = template
         self.reset()
 
     def reset(self):
@@ -103,7 +105,8 @@ class Predict(Module, Parameter):
                 missing,
             )
 
-        adapter = settings.adapter or ChatAdapter()
+        if self.template is not None: adapter = CustomAdapter(template=self.template)
+        else: adapter = settings.adapter or ChatAdapter()
         completions = adapter(
             lm,
             lm_kwargs=config,
