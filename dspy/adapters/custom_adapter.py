@@ -55,15 +55,7 @@ class CustomAdapter(Adapter):
             # fallback to JSONAdapter
             return JSONAdapter()(lm, lm_kwargs, signature, demos, inputs)
 
-    def format(
-        self, signature: Type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        if self.check_template(signature, self.template):
-            return self.custom_format(signature, demos, inputs)
-        else:
-            return self.standard_format(signature, demos, inputs)
-
-    def check_template(signature: Type[Signature], template: str):
+    def check_template(self, signature: Type[Signature], template: str):
         input_field_names = [name for name, _ in signature.input_fields.items()]
         valid = True
         for input_field_name in input_field_names:
@@ -71,14 +63,17 @@ class CustomAdapter(Adapter):
             if check_str not in template:
                 valid = False
                 break
-        if "[[ ## optimizing ## ]]" not in template:
+        if "[[ ## instructions ## ]]" not in template:
             valid = False
         return valid
 
-    def custom_format(
+    def format(
         self, signature: Type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]
     ) -> list[dict[str, Any]]:
         messages: list[dict[str, Any]] = []
+
+        if not self.check_template(signature, self.template):
+            print(f"TEMPLATE IS INVALID\nSignature: {signature}\nTemplate: {self.template}")
 
         # Extract demos where some of the output_fields are not filled in.
         incomplete_demos = [
@@ -101,42 +96,7 @@ class CustomAdapter(Adapter):
             formatted_prompt = unformatted_prompt.replace(check_str, inputs.get(input_field_name))
         instructions = textwrap.dedent(signature.instructions)
         objective = ("\n" + " " * 8).join([""] + instructions.splitlines())
-        prepared_instructions = formatted_prompt.replace("[[ ## optimizing ## ]]", objective)
-        messages.append({"role": "system", "content": prepared_instructions})
-
-        # Add the few-shot examples
-        for demo in demos:
-            messages.append(self.format_turn(signature, demo, role="user", incomplete=demo in incomplete_demos))
-            messages.append(self.format_turn(signature, demo, role="assistant", incomplete=demo in incomplete_demos))
-
-        # Add the chat history after few-shot examples
-        if any(field.annotation == History for field in signature.input_fields.values()):
-            messages.extend(self.format_conversation_history(signature, inputs))
-        else:
-            messages.append(self.format_turn(signature, inputs, role="user"))
-
-        messages = try_expand_image_tags(messages)
-        return messages
-
-    def standard_format(
-        self, signature: Type[Signature], demos: list[dict[str, Any]], inputs: dict[str, Any]
-    ) -> list[dict[str, Any]]:
-        messages: list[dict[str, Any]] = []
-
-        # Extract demos where some of the output_fields are not filled in.
-        incomplete_demos = [
-            demo for demo in demos if not all(k in demo and demo[k] is not None for k in signature.fields)
-        ]
-        complete_demos = [demo for demo in demos if demo not in incomplete_demos]
-        # Filter out demos that don't have at least one input and one output field.
-        incomplete_demos = [
-            demo
-            for demo in incomplete_demos
-            if any(k in demo for k in signature.input_fields) and any(k in demo for k in signature.output_fields)
-        ]
-
-        demos = incomplete_demos + complete_demos
-        prepared_instructions = prepare_instructions(signature)
+        prepared_instructions = formatted_prompt.replace("[[ ## instructions ## ]]", objective)
         messages.append({"role": "system", "content": prepared_instructions})
 
         # Add the few-shot examples
