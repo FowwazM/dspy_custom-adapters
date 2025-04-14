@@ -89,16 +89,30 @@ class CustomAdapter(Adapter):
 
         demos = incomplete_demos + complete_demos
 
-        unformatted_prompt = self.template
+        def type_info(v):
+            if v.annotation is not str:
+                return f" (must be formatted as a valid Python {get_annotation_name(v.annotation)})"
+            else:
+                return ""
+
+        formatted_prompt = self.template
         input_field_names = [name for name, _ in signature.input_fields.items()]
         for input_field_name in input_field_names:
             check_str = f"[[ ## {input_field_name} ## ]]"
-            formatted_prompt = unformatted_prompt.replace(check_str, inputs.get(input_field_name))
+            formatted_prompt = formatted_prompt.replace(check_str, inputs.get(input_field_name))
         instructions = textwrap.dedent(signature.instructions)
         objective = ("\n" + " " * 8).join([""] + instructions.splitlines())
         prepared_instructions = formatted_prompt.replace("[[ ## instructions ## ]]", objective)
-        messages.append({"role": "system", "content": prepared_instructions})
+        field_instructions = (
+            "Respond with the corresponding output fields, starting with the field "
+            + ", then ".join(f"`[[ ## {f} ## ]]`{type_info(v)}" for f, v in signature.output_fields.items())
+            + ", and then ending with the marker for `[[ ## completed ## ]]`."
+        )
+        clamped_instructions = "\n\n".join(msg for msg in [prepared_instructions, field_instructions])
+        messages.append({"role": "user", "content": clamped_instructions})
 
+        # CUSTOM ADAPTER DOES NOT SUPPORT FEW-SHOT PROMPTING YET
+        '''
         # Add the few-shot examples
         for demo in demos:
             messages.append(self.format_turn(signature, demo, role="user", incomplete=demo in incomplete_demos))
@@ -107,8 +121,7 @@ class CustomAdapter(Adapter):
         # Add the chat history after few-shot examples
         if any(field.annotation == History for field in signature.input_fields.values()):
             messages.extend(self.format_conversation_history(signature, inputs))
-        else:
-            messages.append(self.format_turn(signature, inputs, role="user"))
+        '''
 
         messages = try_expand_image_tags(messages)
         return messages
