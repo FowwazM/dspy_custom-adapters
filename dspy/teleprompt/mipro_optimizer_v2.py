@@ -11,6 +11,7 @@ from optuna.distributions import CategoricalDistribution
 import dspy
 from dspy.evaluate.evaluate import Evaluate
 from dspy.propose import GroundedProposer
+from dspy.propose import CustomProposer
 from dspy.teleprompt.teleprompt import Teleprompter
 from dspy.teleprompt.utils import (
     create_minibatch,
@@ -63,6 +64,7 @@ class MIPROv2(Teleprompter):
         track_stats: bool = True,
         log_dir: Optional[str] = None,
         metric_threshold: Optional[float] = None,
+        custom_task = None,
     ):
         # Validate 'auto' parameter
         allowed_modes = {None, "light", "medium", "heavy"}
@@ -88,6 +90,7 @@ class MIPROv2(Teleprompter):
         self.metric_threshold = metric_threshold
         self.seed = seed
         self.rng = None
+        self.custom_task = custom_task
 
     def compile(
         self,
@@ -407,7 +410,7 @@ class MIPROv2(Teleprompter):
             "We will use the few-shot examples from the previous step, a generated dataset summary, a summary of the program code, and a randomly selected prompting tip to propose instructions."
         )
 
-        proposer = GroundedProposer(
+        proposer = CustomProposer(
             program=program,
             trainset=trainset,
             prompt_model=self.prompt_model,
@@ -422,6 +425,7 @@ class MIPROv2(Teleprompter):
             set_history_randomly=False,
             verbose=self.verbose,
             rng=self.rng,
+            custom_task=self.custom_task,
         )
 
         logger.info("\nProposing instructions...\n")
