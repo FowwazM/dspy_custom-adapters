@@ -129,6 +129,11 @@ class CustomAdapter(Adapter):
     def parse(self, signature: Type[Signature], completion: str) -> dict[str, Any]:
         sections = [(None, [])]
 
+        completion.strip()
+        if completion.startswith("```json"):
+            completion = completion[completion.find("json") + 4:completion.rfind("```")].strip()
+            completion = f"[[ ## {signature.output_fields.keys()[0]} ## ]]" + completion
+
         for line in completion.splitlines():
             match = field_header_pattern.match(line.strip())
             if match:
