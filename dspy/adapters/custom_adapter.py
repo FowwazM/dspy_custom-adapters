@@ -132,7 +132,7 @@ class CustomAdapter(Adapter):
         completion.strip()
         if completion.startswith("```json"):
             completion = completion[completion.find("json") + 4:completion.rfind("```")].strip()
-            completion = f"[[ ## {signature.output_fields.keys()[0]} ## ]]" + completion
+            completion = f"[[ ## raw_answer ## ]]" + completion
 
         for line in completion.splitlines():
             match = field_header_pattern.match(line.strip())
